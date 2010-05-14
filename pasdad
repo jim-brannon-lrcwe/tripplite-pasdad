@@ -1,8 +1,13 @@
-#!/bin/sh
+#!/bin/sh -e
 #
 # System startup script for PowerAlert Shutdown Agent
 #
 # LSB compatible service control script; see http://www.linuxbase.org/spec/
+#
+# converted to ubuntu compatible script May 2010, Jim Brannon, Leonard Rice Engineers
+# -------------------------------------removed
+# ---------------------------------------added
+# --------------------------------------------
 #
 ### BEGIN INIT INFO
 # Provides:          pasdad
@@ -44,10 +49,24 @@ test -x $PROG_BIN || { echo "$PROG_BIN not installed";
 #      rc_reset         clear both the local and overall rc status
 #      rc_exit          exit appropriate to overall rc status
 #      rc_active        checks whether a service is activated by symlinks
-. /etc/rc.status
-
+# -------------------------------------removed
+#. /etc/rc.status
+# ---------------------------------------added
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+DAEMON=${PROG_BIN}
+PIDDIR=/var/run/${PROG_NAME}
+PIDFILE=${PIDDIR}/${PROG_NAME}.pid
+DAEMONUSER=root
+DESC="PowerAlert Shutdown Agent"
+test -x $DAEMON || exit 0
+. /lib/lsb/init-functions
+DISALLOW_MODULE_LOADING=1
+# --------------------------------------------
 # Reset status of this service
-rc_reset
+# -------------------------------------removed
+#rc_reset
+# ---------------------------------------added
+# --------------------------------------------
 
 # Return values acc. to LSB for all commands but status:
 # 0	  - success
@@ -67,26 +86,48 @@ rc_reset
 
 case "$1" in
     start)
-	echo -n "Starting PowerAlert Shutdown Agent "
+# -------------------------------------removed
+#	echo -n "Starting PowerAlert Shutdown Agent "
 	## Start daemon with startproc(8). If this fails
 	## the return value is set appropriately by startproc.
-	startproc -q $PROG_BIN 
-	rc_status -v || rc_exit
+#	startproc -q $PROG_BIN 
+#	rc_status -v || rc_exit
+# ---------------------------------------added
+        log_daemon_msg "Starting $DESC: $PROG_NAME"
+	if [ ! -d $PIDDIR ]; then
+		mkdir -p $PIDDIR
+		chown $DAEMONUSER:$DAEMONUSER $PIDDIR
+	fi
+	#start-stop-daemon -x $DAEMON -p $PIDFILE --start -- --system --daemonize --high-priority --log-target=syslog --disallow-module-loading=$DISALLOW_MODULE_LOADING
+	start-stop-daemon --start --quiet --oknodo --pidfile "$PIDFILE" --exec $DAEMON && success=1
+        log_end_msg $?
+#---------------------------------------------
 	;;
     stop)
-	echo -n "Stopping PowerAlert Shutdown Agent "
+# -------------------------------------removed
+#	echo -n "Stopping PowerAlert Shutdown Agent "
 	## Stop daemon with killproc(8) and if this fails
 	## killproc sets the return value according to LSB.
-	killproc -TERM -t 30s $PROG_BIN
-	rc_status -v
+#	killproc -TERM -t 30s $PROG_BIN
+#	rc_status -v
+# ---------------------------------------added
+	log_begin_msg "Stopping $DESC: $PROG_NAME"
+	#start-stop-daemon -p $PIDFILE --stop --retry 5 || echo -n "...which is not running"
+	start-stop-daemon --stop --quiet --retry 5 --oknodo --pidfile $PIDFILE --name $PROG_NAME && success=1
+	log_end_msg $?
+# --------------------------------------------
 	;;
     restart)
 	## Stop the service and regardless of whether it was
 	## running or not, start it again.
 	$0 stop
 	$0 start
+# -------------------------------------removed
 	# Remember status and be quiet
-	rc_status
+#	rc_status
+# ---------------------------------------added
+	log_end_msg $?
+# --------------------------------------------
 	;;
     status)
 	## Check status with checkproc(8), if process is running
@@ -104,14 +145,22 @@ case "$1" in
 	# NOTE: rc_status knows that we called this init script with
 	# "status" option and adapts its messages accordingly.
 
-	echo -n "Checking PowerAlert Shutdown Agent"
-	/sbin/checkproc $PROG_BIN
-	rc_status -v
+# -------------------------------------removed
+#	echo -n "Checking PowerAlert Shutdown Agent"
+#	/sbin/checkproc $PROG_BIN
+#	rc_status -v
+# ---------------------------------------added
+status_of_proc -p $PIDFILE "$DAEMON" "$DESC" && exit 0 || exit $?
+# --------------------------------------------
 	;;
     *)
 	echo "Usage: $0 {start|stop|status|restart}"
 	exit 1
 	;;
 esac
-rc_exit
+# -------------------------------------removed
+#rc_exit
+# ---------------------------------------added
+exit 0
+# --------------------------------------------
 
